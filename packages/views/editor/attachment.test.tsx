@@ -17,7 +17,10 @@ const {
 }));
 
 vi.mock("@multica/core/api", () => ({
-  api: { getAttachmentTextContent: getAttachmentTextContentMock },
+  api: {
+    getAttachmentTextContent: getAttachmentTextContentMock,
+    getBaseUrl: () => "https://api.example.test",
+  },
   PreviewTooLargeError: class extends Error {},
   PreviewUnsupportedError: class extends Error {},
 }));
@@ -83,9 +86,9 @@ const resolverState: { attachments: AttachmentRecord[] } = { attachments: [] };
 vi.mock("./attachment-download-context", () => ({
   useAttachmentDownloadResolver: () => ({
     resolveAttachmentId: (url: string) =>
-      resolverState.attachments.find((a) => a.url === url)?.id,
+      resolverState.attachments.find((a) => a.url === url || a.download_url === url)?.id,
     resolveAttachment: (url: string) =>
-      resolverState.attachments.find((a) => a.url === url),
+      resolverState.attachments.find((a) => a.url === url || a.download_url === url),
     openByUrl: openByUrlMock,
   }),
   AttachmentDownloadProvider: ({ children }: { children: ReactNode }) =>
@@ -136,7 +139,7 @@ describe("Attachment — image dispatch", () => {
     renderWithQuery(<Attachment attachment={{ kind: "record", attachment: att }} />);
     const img = document.querySelector("img");
     expect(img).toBeTruthy();
-    expect(img?.getAttribute("src")).toBe(att.url);
+    expect(img?.getAttribute("src")).toBe(att.download_url);
     expect(img?.getAttribute("alt")).toBe("shot.png");
     expect(screen.getByTitle("View")).toBeTruthy();
     expect(screen.getByTitle("Download")).toBeTruthy();
@@ -163,7 +166,8 @@ describe("Attachment — image dispatch", () => {
   it("url-only image resolves to a record via context and uses its id for download", () => {
     const att = makeRecord({
       filename: "from-resolver.png",
-      url: "https://cdn.example.test/from-resolver.png",
+      url: "/uploads/workspaces/ws-1/from-resolver.png",
+      download_url: "/api/attachments/att-1/download",
     });
     resolverState.attachments = [att];
     renderWithQuery(
@@ -176,7 +180,7 @@ describe("Attachment — image dispatch", () => {
       />,
     );
     const img = document.querySelector("img");
-    expect(img?.getAttribute("src")).toBe(att.url);
+    expect(img?.getAttribute("src")).toBe("https://api.example.test/api/attachments/att-1/download");
     fireEvent.click(screen.getByTitle("Download"));
     expect(downloadMock).toHaveBeenCalledWith("att-1");
   });

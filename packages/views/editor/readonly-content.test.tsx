@@ -9,7 +9,10 @@ const { getAttachmentTextContentMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@multica/core/api", () => ({
-  api: { getAttachmentTextContent: getAttachmentTextContentMock },
+  api: {
+    getAttachmentTextContent: getAttachmentTextContentMock,
+    getBaseUrl: () => "https://api.example.test",
+  },
   PreviewTooLargeError: class extends Error {},
   PreviewUnsupportedError: class extends Error {},
 }));
@@ -469,6 +472,47 @@ describe("ReadonlyContent file-card → AttachmentBlock HTML routing", () => {
     // AttachmentCard chrome surfaces the filename as visible text in a
     // <p class="truncate"> row. HtmlAttachmentPreview replaces it entirely.
     expect(queryByText("report.html")).toBeNull();
+  });
+});
+
+describe("ReadonlyContent attachment image delivery URLs", () => {
+  function renderWithQuery(ui: ReactElement) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  }
+
+  it("renders raw /uploads markdown images through the attachment download URL", () => {
+    const attachment = {
+      id: "att-1",
+      workspace_id: "ws-1",
+      issue_id: "issue-1",
+      comment_id: "comment-1",
+      chat_session_id: null,
+      chat_message_id: null,
+      uploader_type: "member",
+      uploader_id: "user-1",
+      filename: "shot.png",
+      url: "/uploads/workspaces/ws-1/att-1.png",
+      download_url: "/api/attachments/att-1/download",
+      content_type: "image/png",
+      size_bytes: 123,
+      created_at: "2026-06-08T00:00:00Z",
+    };
+
+    const { container } = renderWithQuery(
+      <ReadonlyContent
+        content="![shot](/uploads/workspaces/ws-1/att-1.png)"
+        attachments={[attachment]}
+      />,
+    );
+
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe(
+      "https://api.example.test/api/attachments/att-1/download",
+    );
   });
 });
 

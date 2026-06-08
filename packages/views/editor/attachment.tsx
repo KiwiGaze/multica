@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { cn } from "@multica/ui/lib/utils";
 import { copyText } from "@multica/ui/lib/clipboard";
 import type { Attachment as AttachmentRecord } from "@multica/core/types";
+import { resolvePublicFileUrl } from "@multica/core/workspace/avatar-url";
 import { useT } from "../i18n";
 import { useAttachmentDownloadResolver } from "./attachment-download-context";
 import { useAttachmentPreview } from "./attachment-preview-modal";
@@ -129,6 +130,13 @@ function normalize(
   };
 }
 
+function imageDisplayUrl(state: Normalized): string {
+  if (state.record?.download_url) {
+    return resolvePublicFileUrl(state.record.download_url) ?? state.record.download_url;
+  }
+  return state.url;
+}
+
 // ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
@@ -179,7 +187,7 @@ export function Attachment({
     return (
       <>
         <ImageAttachmentView
-          src={state.url}
+          src={imageDisplayUrl(state)}
           alt={state.filename}
           uploading={state.uploading}
           width={state.width}

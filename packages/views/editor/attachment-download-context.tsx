@@ -27,6 +27,14 @@ interface ProviderProps {
   children: ReactNode;
 }
 
+function findAttachmentByUrl(
+  attachments: Attachment[] | undefined,
+  url: string,
+): Attachment | undefined {
+  if (!url || !attachments?.length) return undefined;
+  return attachments.find((a) => a.url === url || a.download_url === url);
+}
+
 /**
  * Provides a click-time download handler to Tiptap NodeViews mounted inside
  * `ContentEditor`. Without a provider the consumer falls back to opening the
@@ -37,17 +45,13 @@ export function AttachmentDownloadProvider({ attachments, children }: ProviderPr
   const value = useMemo<ResolvedDownload>(
     () => ({
       resolveAttachmentId: (url) => {
-        if (!url || !attachments?.length) return undefined;
-        return attachments.find((a) => a.url === url)?.id;
+        return findAttachmentByUrl(attachments, url)?.id;
       },
       resolveAttachment: (url) => {
-        if (!url || !attachments?.length) return undefined;
-        return attachments.find((a) => a.url === url);
+        return findAttachmentByUrl(attachments, url);
       },
       openByUrl: (url) => {
-        const att = url && attachments?.length
-          ? attachments.find((a) => a.url === url)
-          : undefined;
+        const att = findAttachmentByUrl(attachments, url);
         if (att) {
           download(att.id);
           return;
